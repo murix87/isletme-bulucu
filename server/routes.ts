@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertSearchSchema } from "@shared/schema";
 
 async function getPlaceDetails(placeId: string) {
-  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_phone_number,formatted_address,website,type,email&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
+  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_phone_number,formatted_address,website,type&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
 
   try {
     const response = await fetch(url);
@@ -22,40 +22,64 @@ async function getPlaceDetails(placeId: string) {
   }
 }
 
-async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
-  let allResults = [];
-  let nextPageToken = null;
-  let pageCount = 0;
+function generateGridPoints(center: { lat: number; lng: number }, radius: number): Array<{ lat: number; lng: number }> {
+  const gridPoints: Array<{ lat: number; lng: number }> = [];
+  const gridSize = Math.ceil(radius / 100); // Her 100 metrede bir nokta
+  const latOffset = 0.001; // Yaklaşık 100 metre
+  const lngOffset = 0.001; // Yaklaşık 100 metre
 
-  do {
-    try {
-      // Her sayfa için 3 saniye bekle (ilk sayfa hariç)
-      if (nextPageToken) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
+  for (let i = -gridSize; i <= gridSize; i++) {
+    for (let j = -gridSize; j <= gridSize; j++) {
+      const lat = center.lat + (i * latOffset);
+      const lng = center.lng + (j * lngOffset);
+
+      // Merkeze olan uzaklığı hesapla
+      const distance = Math.sqrt(Math.pow(i * 100, 2) + Math.pow(j * 100, 2));
+      if (distance <= radius) {
+        gridPoints.push({ lat, lng });
       }
+    }
+  }
 
-      const baseUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
-      const url = nextPageToken ? `${baseUrl}&pagetoken=${nextPageToken}` : baseUrl;
+  return gridPoints;
+}
 
-      console.log(`Fetching page ${pageCount + 1}...`);
+async function searchNearbyPlaces(centerLat: number, centerLng: number, radius: number) {
+  const center = { lat: centerLat, lng: centerLng };
+  const gridPoints = generateGridPoints(center, radius);
+  const seenPlaceIds = new Set<string>();
+  let allResults: any[] = [];
+
+  console.log(`Generated ${gridPoints.length} search points for radius ${radius}m`);
+
+  for (const point of gridPoints) {
+    try {
+      // Her nokta için küçük bir yarıçap kullan
+      const searchRadius = Math.min(200, radius);
+      console.log(`Searching at point (${point.lat}, ${point.lng}) with radius ${searchRadius}m`);
+
+      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${point.lat},${point.lng}&radius=${searchRadius}&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
       const response = await fetch(url);
       const data = await response.json();
 
       if (data.status === 'ZERO_RESULTS') {
-        console.log('No results found');
-        break;
+        continue;
       }
 
       if (data.status !== 'OK') {
         console.error('Places API Error:', data);
-        throw new Error(data.error_message || 'Places API error');
+        continue;
       }
 
-      if (data.results && data.results.length > 0) {
-        console.log(`Found ${data.results.length} places on page ${pageCount + 1}`);
+      // Yeni yerler için detayları al
+      const newPlaces = data.results.filter((place: any) => !seenPlaceIds.has(place.place_id));
+
+      if (newPlaces.length > 0) {
+        console.log(`Found ${newPlaces.length} new places at current point`);
 
         const detailedResults = await Promise.all(
-          data.results.map(async (place: any) => {
+          newPlaces.map(async (place: any) => {
+            seenPlaceIds.add(place.place_id);
             const details = await getPlaceDetails(place.place_id);
             return {
               placeId: place.place_id,
@@ -65,24 +89,23 @@ async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
               longitude: place.geometry.location.lng,
               phone: details?.formatted_phone_number || null,
               website: details?.website || null,
-              email: details?.email || null,
               types: place.types || []
             };
           })
         );
 
         allResults.push(...detailedResults);
-        console.log(`Total results so far: ${allResults.length}`);
+        console.log(`Total unique places found: ${allResults.length}`);
       }
 
-      nextPageToken = data.next_page_token;
-      pageCount++;
+      // API limitlerine uymak için bekle
+      await new Promise(resolve => setTimeout(resolve, 200));
 
     } catch (error) {
-      console.error('Places API Error:', error);
-      throw new Error('İşletmeler aranırken bir hata oluştu');
+      console.error('Error searching at point:', point, error);
+      continue;
     }
-  } while (nextPageToken);
+  }
 
   console.log(`Search completed. Total results: ${allResults.length}`);
   return allResults;
@@ -136,7 +159,6 @@ export function registerRoutes(app: Express): Server {
         "Adres",
         "Telefon Numarası",
         "Web Sitesi",
-        "E-posta Adresi",
         "İşyeri Kategorileri",
         "Konum (Enlem)",
         "Konum (Boylam)"
@@ -157,7 +179,6 @@ export function registerRoutes(app: Express): Server {
           result.address,
           result.phone || '',
           result.website || '',
-          result.email || '',
           types,
           result.latitude,
           result.longitude
