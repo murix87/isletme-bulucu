@@ -41,7 +41,7 @@ export class MemStorage implements IStorage {
 
     const savedResults: SearchResult[] = results.map(result => ({
       id: this.currentResultId++,
-      searchId: result.searchId,
+      searchId: Number(result.searchId), // searchId'yi number'a çevir
       placeId: result.placeId,
       name: result.name,
       address: result.address,
@@ -54,9 +54,7 @@ export class MemStorage implements IStorage {
     }));
 
     const searchId = savedResults[0].searchId;
-    if (searchId !== undefined) {
-      this.searchResults.set(searchId, savedResults);
-    }
+    this.searchResults.set(searchId, savedResults);
     return savedResults;
   }
 

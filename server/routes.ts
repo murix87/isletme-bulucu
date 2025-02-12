@@ -115,13 +115,18 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/search", async (req, res) => {
     try {
       const searchData = insertSearchSchema.parse(req.body);
+      console.log('Creating search with data:', searchData);
+
       const search = await storage.createSearch(searchData);
+      console.log('Search created:', search);
 
       const places = await searchNearbyPlaces(
         searchData.latitude,
         searchData.longitude,
         searchData.radius
       );
+
+      console.log(`Found ${places.length} places, saving to storage...`);
 
       const results = await storage.saveSearchResults(
         places.map(place => ({
@@ -130,7 +135,8 @@ export function registerRoutes(app: Express): Server {
         }))
       );
 
-      res.json({ search, results });
+      console.log(`Saved ${results.length} results to storage`);
+      res.json({ results });
     } catch (error) {
       console.error('Search Error:', error);
       res.status(400).json({ error: String(error) });
