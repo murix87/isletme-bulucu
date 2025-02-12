@@ -12,72 +12,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSearch = async (radius: number) => {
-    if (!selectedLocation) {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Lütfen haritadan bir konum seçin"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    setResults([]); // Önceki sonuçları temizle
-
-    const searchData = {
-      latitude: selectedLocation.lat,
-      longitude: selectedLocation.lng,
-      radius: radius
-    };
-
-    try {
-      console.log("Arama parametreleri:", searchData);
-
-      const res = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(searchData)
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Arama yapılırken bir hata oluştu');
-      }
-
-      console.log("Arama sonuçları:", data);
-
-      if (!data.results || !Array.isArray(data.results)) {
-        throw new Error('Sunucudan geçersiz yanıt alındı');
-      }
-
-      setResults(data.results);
-
-      if (data.results.length === 0) {
-        toast({
-          title: "Bilgi",
-          description: "Bu bölgede işletme bulunamadı"
-        });
-      } else {
-        toast({
-          title: "Başarılı",
-          description: `${data.results.length} işletme bulundu`
-        });
-      }
-    } catch (error) {
-      console.error('Arama hatası:', error);
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: error instanceof Error ? error.message : 'Bir hata oluştu'
-      });
-      setResults([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="container mx-auto">
@@ -90,7 +24,38 @@ export default function Home() {
             <Card className="p-4 mb-4">
               <SearchForm 
                 selectedLocation={selectedLocation}
-                onSearch={handleSearch}
+                onSearch={async (radius) => {
+                  if (!selectedLocation) return;
+                  setIsLoading(true);
+                  try {
+                    const res = await fetch("/api/search", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        latitude: Number(selectedLocation.lat),
+                        longitude: Number(selectedLocation.lng),
+                        radius: Number(radius)
+                      })
+                    });
+
+                    if (!res.ok) {
+                      const error = await res.json();
+                      throw new Error(error.error || 'Arama yapılırken bir hata oluştu');
+                    }
+
+                    const data = await res.json();
+                    setResults(data.results);
+                  } catch (error) {
+                    console.error(error);
+                    toast({
+                      variant: "destructive",
+                      title: "Hata",
+                      description: error instanceof Error ? error.message : 'Bir hata oluştu'
+                    });
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
               />
             </Card>
             <ResultsList results={results} isLoading={isLoading} />

@@ -17,19 +17,22 @@ export const searchResults = pgTable("search_results", {
   address: text("address").notNull(),
   phone: text("phone"),
   website: text("website"),
+  email: text("email"),
   types: text("types").array(),
   latitude: numeric("latitude", { precision: 10, scale: 6 }).notNull(),
   longitude: numeric("longitude", { precision: 10, scale: 6 }).notNull(),
 });
 
-// Özel arama şeması - frontend'den gelen number değerleri için
+// Convert string values to numbers in the schema
 export const insertSearchSchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
-  radius: z.number().min(100).max(200000),
+  radius: z.number(),
 });
+
+export const insertSearchResultSchema = createInsertSchema(searchResults);
 
 export type Search = typeof searches.$inferSelect;
 export type SearchResult = typeof searchResults.$inferSelect;
 export type InsertSearch = z.infer<typeof insertSearchSchema>;
-export type InsertSearchResult = typeof searchResults.$inferInsert;
+export type InsertSearchResult = z.infer<typeof insertSearchResultSchema>;

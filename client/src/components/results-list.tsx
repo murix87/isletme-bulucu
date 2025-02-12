@@ -9,7 +9,7 @@ interface ResultsListProps {
   isLoading: boolean;
 }
 
-export function ResultsList({ results, isLoading }: ResultsListProps) {
+export function ResultsList({ results = [], isLoading }: ResultsListProps) {
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -25,18 +25,12 @@ export function ResultsList({ results, isLoading }: ResultsListProps) {
   }
 
   if (!results || results.length === 0) {
-    return (
-      <Card className="p-4">
-        <p className="text-muted-foreground text-center">
-          Henüz sonuç yok. Lütfen haritadan bir konum seçin ve arama yapın.
-        </p>
-      </Card>
-    );
+    return null;
   }
 
   const handleExport = () => {
-    const searchId = results[0].searchId;
-    if (searchId) {
+    if (results.length > 0) {
+      const searchId = results[0].searchId;
       window.location.href = `/api/search/${searchId}/export`;
     }
   };
@@ -83,6 +77,13 @@ export function ResultsList({ results, isLoading }: ResultsListProps) {
                   >
                     Web Sitesi
                   </a>
+                </div>
+              )}
+
+              {result.email && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Mail className="h-4 w-4 flex-shrink-0" />
+                  <span>{result.email}</span>
                 </div>
               )}
 

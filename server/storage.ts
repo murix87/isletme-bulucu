@@ -47,22 +47,21 @@ export class MemStorage implements IStorage {
       address: result.address,
       phone: result.phone || null,
       website: result.website || null,
-      types: result.types || [],
+      email: result.email || null,
+      types: result.types || null,
       latitude: result.latitude.toString(),
       longitude: result.longitude.toString()
     }));
 
     const searchId = savedResults[0].searchId;
-    this.searchResults.set(searchId, savedResults);
-
-    console.log(`Saved ${savedResults.length} results for searchId: ${searchId}`);
+    if (searchId !== undefined) {
+      this.searchResults.set(searchId, savedResults);
+    }
     return savedResults;
   }
 
   async getSearchResults(searchId: number): Promise<SearchResult[]> {
-    const results = this.searchResults.get(searchId) || [];
-    console.log(`Retrieved ${results.length} results for searchId: ${searchId}`);
-    return results;
+    return this.searchResults.get(searchId) || [];
   }
 }
 

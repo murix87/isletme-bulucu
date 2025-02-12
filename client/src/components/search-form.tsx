@@ -34,7 +34,7 @@ export function SearchForm({ selectedLocation, onSearch }: SearchFormProps) {
           id="radius"
           type="number"
           min="100"
-          max="200000"
+          max="50000"
           value={radius}
           onChange={(e) => setRadius(e.target.value)}
           className="mt-1"

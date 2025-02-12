@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertSearchSchema } from "@shared/schema";
 
 async function getPlaceDetails(placeId: string) {
-  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_phone_number,formatted_address,website,type&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
+  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_phone_number,formatted_address,website,type,email&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
 
   try {
     const response = await fetch(url);
@@ -22,64 +22,25 @@ async function getPlaceDetails(placeId: string) {
   }
 }
 
-function generateGridPoints(center: { lat: number; lng: number }, radius: number): Array<{ lat: number; lng: number }> {
-  const gridPoints: Array<{ lat: number; lng: number }> = [];
-  const gridSize = Math.ceil(radius / 100); // Her 100 metrede bir nokta
-  const latOffset = 0.001; // Yaklaşık 100 metre
-  const lngOffset = 0.001; // Yaklaşık 100 metre
+async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
+  let allResults = [];
+  let nextPageToken = null;
 
-  for (let i = -gridSize; i <= gridSize; i++) {
-    for (let j = -gridSize; j <= gridSize; j++) {
-      const lat = center.lat + (i * latOffset);
-      const lng = center.lng + (j * lngOffset);
+  do {
+    const baseUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
+    const url = nextPageToken ? `${baseUrl}&pagetoken=${nextPageToken}` : baseUrl;
 
-      // Merkeze olan uzaklığı hesapla
-      const distance = Math.sqrt(Math.pow(i * 100, 2) + Math.pow(j * 100, 2));
-      if (distance <= radius) {
-        gridPoints.push({ lat, lng });
-      }
-    }
-  }
-
-  return gridPoints;
-}
-
-async function searchNearbyPlaces(centerLat: number, centerLng: number, radius: number) {
-  const center = { lat: centerLat, lng: centerLng };
-  const gridPoints = generateGridPoints(center, radius);
-  const seenPlaceIds = new Set<string>();
-  let allResults: any[] = [];
-
-  console.log(`Generated ${gridPoints.length} search points for radius ${radius}m`);
-
-  for (const point of gridPoints) {
     try {
-      // Her nokta için küçük bir yarıçap kullan
-      const searchRadius = Math.min(200, radius);
-      console.log(`Searching at point (${point.lat}, ${point.lng}) with radius ${searchRadius}m`);
-
-      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${point.lat},${point.lng}&radius=${searchRadius}&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
       const response = await fetch(url);
       const data = await response.json();
 
-      if (data.status === 'ZERO_RESULTS') {
-        continue;
+      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+        throw new Error(data.error_message || 'Places API error');
       }
 
-      if (data.status !== 'OK') {
-        console.error('Places API Error:', data);
-        continue;
-      }
-
-      // Yeni yerler için detayları al
-      const newPlaces = data.results.filter((place: any) => !seenPlaceIds.has(place.place_id));
-
-      if (newPlaces.length > 0) {
-        console.log(`Found ${newPlaces.length} new places at current point`);
-
+      if (data.results && data.results.length > 0) {
         const detailedResults = await Promise.all(
-          newPlaces.map(async (place: any) => {
-            seenPlaceIds.add(place.place_id);
+          data.results.map(async (place: any) => {
             const details = await getPlaceDetails(place.place_id);
             return {
               placeId: place.place_id,
@@ -89,25 +50,25 @@ async function searchNearbyPlaces(centerLat: number, centerLng: number, radius: 
               longitude: place.geometry.location.lng,
               phone: details?.formatted_phone_number || null,
               website: details?.website || null,
+              email: details?.email || null,
               types: place.types || []
             };
           })
         );
 
         allResults.push(...detailedResults);
-        console.log(`Total unique places found: ${allResults.length}`);
       }
 
-      // API limitlerine uymak için bekle
-      await new Promise(resolve => setTimeout(resolve, 200));
-
+      nextPageToken = data.next_page_token;
+      if (nextPageToken) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
     } catch (error) {
-      console.error('Error searching at point:', point, error);
-      continue;
+      console.error('Places API Error:', error);
+      throw new Error('İşletmeler aranırken bir hata oluştu');
     }
-  }
+  } while (nextPageToken);
 
-  console.log(`Search completed. Total results: ${allResults.length}`);
   return allResults;
 }
 
@@ -115,18 +76,13 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/search", async (req, res) => {
     try {
       const searchData = insertSearchSchema.parse(req.body);
-      console.log('Creating search with data:', searchData);
-
       const search = await storage.createSearch(searchData);
-      console.log('Search created:', search);
 
       const places = await searchNearbyPlaces(
         searchData.latitude,
         searchData.longitude,
         searchData.radius
       );
-
-      console.log(`Found ${places.length} places, saving to storage...`);
 
       const results = await storage.saveSearchResults(
         places.map(place => ({
@@ -135,8 +91,7 @@ export function registerRoutes(app: Express): Server {
         }))
       );
 
-      console.log(`Saved ${results.length} results to storage`);
-      res.json({ results });
+      res.json({ search, results });
     } catch (error) {
       console.error('Search Error:', error);
       res.status(400).json({ error: String(error) });
@@ -165,6 +120,7 @@ export function registerRoutes(app: Express): Server {
         "Adres",
         "Telefon Numarası",
         "Web Sitesi",
+        "E-posta Adresi",
         "İşyeri Kategorileri",
         "Konum (Enlem)",
         "Konum (Boylam)"
@@ -173,7 +129,7 @@ export function registerRoutes(app: Express): Server {
       // Her sonuç için CSV satırı oluştur
       const rows = results.map((result, index) => {
         // İşyeri tiplerini düzgün formatta göster
-        const types = Array.isArray(result.types) ?
+        const types = Array.isArray(result.types) ? 
           result.types
             .map(type => type.replace(/_/g, ' ').toLowerCase())
             .join(', ') : '';
@@ -185,6 +141,7 @@ export function registerRoutes(app: Express): Server {
           result.address,
           result.phone || '',
           result.website || '',
+          result.email || '',
           types,
           result.latitude,
           result.longitude
