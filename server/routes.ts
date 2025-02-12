@@ -25,20 +25,35 @@ async function getPlaceDetails(placeId: string) {
 async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
   let allResults = [];
   let nextPageToken = null;
+  let pageCount = 0;
 
   do {
-    const baseUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
-    const url = nextPageToken ? `${baseUrl}&pagetoken=${nextPageToken}` : baseUrl;
-
     try {
+      // Her sayfa için 3 saniye bekle (ilk sayfa hariç)
+      if (nextPageToken) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+
+      const baseUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
+      const url = nextPageToken ? `${baseUrl}&pagetoken=${nextPageToken}` : baseUrl;
+
+      console.log(`Fetching page ${pageCount + 1}...`);
       const response = await fetch(url);
       const data = await response.json();
 
-      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+      if (data.status === 'ZERO_RESULTS') {
+        console.log('No results found');
+        break;
+      }
+
+      if (data.status !== 'OK') {
+        console.error('Places API Error:', data);
         throw new Error(data.error_message || 'Places API error');
       }
 
       if (data.results && data.results.length > 0) {
+        console.log(`Found ${data.results.length} places on page ${pageCount + 1}`);
+
         const detailedResults = await Promise.all(
           data.results.map(async (place: any) => {
             const details = await getPlaceDetails(place.place_id);
@@ -57,18 +72,19 @@ async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
         );
 
         allResults.push(...detailedResults);
+        console.log(`Total results so far: ${allResults.length}`);
       }
 
       nextPageToken = data.next_page_token;
-      if (nextPageToken) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+      pageCount++;
+
     } catch (error) {
       console.error('Places API Error:', error);
       throw new Error('İşletmeler aranırken bir hata oluştu');
     }
   } while (nextPageToken);
 
+  console.log(`Search completed. Total results: ${allResults.length}`);
   return allResults;
 }
 
@@ -129,7 +145,7 @@ export function registerRoutes(app: Express): Server {
       // Her sonuç için CSV satırı oluştur
       const rows = results.map((result, index) => {
         // İşyeri tiplerini düzgün formatta göster
-        const types = Array.isArray(result.types) ? 
+        const types = Array.isArray(result.types) ?
           result.types
             .map(type => type.replace(/_/g, ' ').toLowerCase())
             .join(', ') : '';
