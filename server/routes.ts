@@ -172,12 +172,6 @@ async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
-      // 120 sonuca ulaştığımızda döngüyü sonlandır
-      if (allResults.length >= 120) {
-        allResults = allResults.slice(0, 120);
-        break;
-      }
-
     } catch (error) {
       console.error('Places API Error:', error);
       throw new Error('İşletmeler aranırken bir hata oluştu');
