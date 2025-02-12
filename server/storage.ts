@@ -41,7 +41,7 @@ export class MemStorage implements IStorage {
 
     const savedResults: SearchResult[] = results.map(result => ({
       id: this.currentResultId++,
-      searchId: Number(result.searchId), // searchId'yi number'a çevir
+      searchId: Number(result.searchId),
       placeId: result.placeId,
       name: result.name,
       address: result.address,
@@ -53,13 +53,18 @@ export class MemStorage implements IStorage {
       longitude: result.longitude.toString()
     }));
 
+    // Use the first result's searchId for storage
     const searchId = savedResults[0].searchId;
     this.searchResults.set(searchId, savedResults);
+
+    console.log(`Saved ${savedResults.length} results for searchId: ${searchId}`);
     return savedResults;
   }
 
   async getSearchResults(searchId: number): Promise<SearchResult[]> {
-    return this.searchResults.get(searchId) || [];
+    const results = this.searchResults.get(searchId) || [];
+    console.log(`Retrieved ${results.length} results for searchId: ${searchId}`);
+    return results;
   }
 }
 
