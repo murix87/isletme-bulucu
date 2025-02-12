@@ -166,8 +166,9 @@ async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
       }
 
       nextPageToken = data.next_page_token;
+
+      // Google Places API requires a delay between requests when using pagetoken
       if (nextPageToken) {
-        // Google Places API requires a delay between requests when using pagetoken
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
@@ -176,6 +177,7 @@ async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
         allResults = allResults.slice(0, 120);
         break;
       }
+
     } catch (error) {
       console.error('Places API Error:', error);
       throw new Error('İşletmeler aranırken bir hata oluştu');
