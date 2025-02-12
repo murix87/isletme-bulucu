@@ -3,6 +3,112 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertSearchSchema } from "@shared/schema";
 
+// İşyeri tiplerini Türkçe'ye çeviren yardımcı fonksiyon
+function translatePlaceType(type: string): string {
+  const translations: Record<string, string> = {
+    accounting: "Muhasebe",
+    airport: "Havalimanı",
+    amusement_park: "Lunapark",
+    aquarium: "Akvaryum",
+    art_gallery: "Sanat Galerisi",
+    atm: "ATM",
+    bakery: "Fırın",
+    bank: "Banka",
+    bar: "Bar",
+    beauty_salon: "Güzellik Salonu",
+    bicycle_store: "Bisiklet Mağazası",
+    book_store: "Kitapçı",
+    bowling_alley: "Bowling Salonu",
+    bus_station: "Otobüs Durağı",
+    cafe: "Kafe",
+    campground: "Kamp Alanı",
+    car_dealer: "Araba Galerisi",
+    car_rental: "Araba Kiralama",
+    car_repair: "Araba Tamiri",
+    car_wash: "Araba Yıkama",
+    casino: "Gazino",
+    cemetery: "Mezarlık",
+    church: "Kilise",
+    city_hall: "Belediye",
+    clothing_store: "Giyim Mağazası",
+    convenience_store: "Market",
+    courthouse: "Adliye",
+    dentist: "Diş Hekimi",
+    department_store: "Alışveriş Merkezi",
+    doctor: "Doktor",
+    drugstore: "Eczane",
+    electrician: "Elektrikçi",
+    electronics_store: "Elektronik Mağazası",
+    embassy: "Elçilik",
+    establishment: "İşletme",
+    fire_station: "İtfaiye",
+    florist: "Çiçekçi",
+    funeral_home: "Cenaze Evi",
+    furniture_store: "Mobilya Mağazası",
+    gas_station: "Benzin İstasyonu",
+    gym: "Spor Salonu",
+    hair_care: "Kuaför",
+    hardware_store: "Hırdavatçı",
+    health: "Sağlık",
+    hindu_temple: "Hindu Tapınağı",
+    home_goods_store: "Ev Eşyaları Mağazası",
+    hospital: "Hastane",
+    insurance_agency: "Sigorta Acentesi",
+    jewelry_store: "Kuyumcu",
+    laundry: "Çamaşırhane",
+    lawyer: "Avukat",
+    library: "Kütüphane",
+    light_rail_station: "Tramvay İstasyonu",
+    liquor_store: "İçki Bayisi",
+    local_government_office: "Resmi Daire",
+    locksmith: "Çilingir",
+    lodging: "Konaklama",
+    meal_delivery: "Yemek Servisi",
+    meal_takeaway: "Paket Servis",
+    mosque: "Cami",
+    movie_rental: "Film Kiralama",
+    movie_theater: "Sinema",
+    moving_company: "Nakliyat Şirketi",
+    museum: "Müze",
+    night_club: "Gece Kulübü",
+    painter: "Boyacı",
+    park: "Park",
+    parking: "Otopark",
+    pet_store: "Evcil Hayvan Mağazası",
+    pharmacy: "Eczane",
+    physiotherapist: "Fizyoterapist",
+    plumber: "Tesisatçı",
+    police: "Polis",
+    post_office: "Postane",
+    primary_school: "İlkokul",
+    real_estate_agency: "Emlakçı",
+    restaurant: "Restoran",
+    roofing_contractor: "Çatı Ustası",
+    rv_park: "Karavan Parkı",
+    school: "Okul",
+    secondary_school: "Ortaokul",
+    shoe_store: "Ayakkabı Mağazası",
+    shopping_mall: "Alışveriş Merkezi",
+    spa: "SPA",
+    stadium: "Stadyum",
+    storage: "Depo",
+    store: "Mağaza",
+    subway_station: "Metro İstasyonu",
+    supermarket: "Süpermarket",
+    synagogue: "Sinagog",
+    taxi_stand: "Taksi Durağı",
+    tourist_attraction: "Turistik Yer",
+    train_station: "Tren İstasyonu",
+    transit_station: "Ulaşım İstasyonu",
+    travel_agency: "Seyahat Acentesi",
+    university: "Üniversite",
+    veterinary_care: "Veteriner",
+    zoo: "Hayvanat Bahçesi"
+  };
+
+  return translations[type.toLowerCase()] || type;
+}
+
 async function getPlaceDetails(placeId: string) {
   const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_phone_number,formatted_address,website,type,email&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
 
@@ -128,10 +234,10 @@ export function registerRoutes(app: Express): Server {
 
       // Her sonuç için CSV satırı oluştur
       const rows = results.map((result, index) => {
-        // İşyeri tiplerini düzgün formatta göster
-        const types = Array.isArray(result.types) ? 
+        // İşyeri tiplerini Türkçe'ye çevir ve düzgün formatta göster
+        const types = Array.isArray(result.types) ?
           result.types
-            .map(type => type.replace(/_/g, ' ').toLowerCase())
+            .map(type => translatePlaceType(type))
             .join(', ') : '';
 
         // Her bir alanı düzenle ve boş değerleri kontrol et
