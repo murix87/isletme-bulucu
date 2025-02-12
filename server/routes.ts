@@ -254,7 +254,7 @@ export function registerRoutes(app: Express): Server {
         ].map(value => `"${value}"`).join(";");
       }).join('\n');
 
-      const csv = `${headers}\n${rows}`;
+      const csv = `\ufeff${headers}\n${rows}`;
 
       // CSV dosya adını tarih ile birlikte oluştur
       const date = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
