@@ -16,8 +16,8 @@ export function MapView({ selectedLocation, onLocationSelect, results }: MapView
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const defaultCenter = { lat: 40.7128, lng: -74.0060 }; // New York
-    
+    const defaultCenter = { lat: 37.0662, lng: 37.3833 }; // Gaziantep
+
     initMap().then(() => {
       const map = new google.maps.Map(mapRef.current!, {
         center: selectedLocation || defaultCenter,
@@ -48,7 +48,7 @@ export function MapView({ selectedLocation, onLocationSelect, results }: MapView
   useEffect(() => {
     if (!mapInstanceRef.current || !selectedLocation) return;
     mapInstanceRef.current.setCenter(selectedLocation);
-    
+
     // Clear old markers
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];

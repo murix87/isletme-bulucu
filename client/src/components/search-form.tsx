@@ -15,7 +15,7 @@ export function SearchForm({ selectedLocation, onSearch }: SearchFormProps) {
   return (
     <div className="space-y-4">
       <div>
-        <Label>Selected Location</Label>
+        <Label>Seçili Konum</Label>
         <div className="flex items-center gap-2 mt-1 text-muted-foreground">
           <MapPin className="h-4 w-4" />
           {selectedLocation ? (
@@ -23,13 +23,13 @@ export function SearchForm({ selectedLocation, onSearch }: SearchFormProps) {
               {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
             </span>
           ) : (
-            <span>Click on the map to select a location</span>
+            <span>Konum seçmek için haritaya tıklayın</span>
           )}
         </div>
       </div>
 
       <div>
-        <Label htmlFor="radius">Search Radius (meters)</Label>
+        <Label htmlFor="radius">Arama Yarıçapı (metre)</Label>
         <Input
           id="radius"
           type="number"
@@ -46,7 +46,7 @@ export function SearchForm({ selectedLocation, onSearch }: SearchFormProps) {
         disabled={!selectedLocation}
         className="w-full"
       >
-        Search Businesses
+        İşletmeleri Ara
       </Button>
     </div>
   );

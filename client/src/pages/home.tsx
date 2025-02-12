@@ -14,9 +14,9 @@ export default function Home() {
     <div className="min-h-screen bg-background p-4">
       <div className="container mx-auto">
         <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          Business Finder
+          İşletme Bulucu
         </h1>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div>
             <Card className="p-4 mb-4">
@@ -47,7 +47,7 @@ export default function Home() {
             </Card>
             <ResultsList results={results} isLoading={isLoading} />
           </div>
-          
+
           <Card className="p-4">
             <MapView
               selectedLocation={selectedLocation}
