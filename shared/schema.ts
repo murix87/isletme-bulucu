@@ -22,11 +22,14 @@ export const searchResults = pgTable("search_results", {
   longitude: numeric("longitude", { precision: 10, scale: 6 }).notNull(),
 });
 
-export const insertSearchSchema = createInsertSchema(searches);
-
-export const insertSearchResultSchema = createInsertSchema(searchResults);
+// Özel arama şeması - frontend'den gelen number değerleri için
+export const insertSearchSchema = z.object({
+  latitude: z.number(),
+  longitude: z.number(),
+  radius: z.number().min(100).max(200000),
+});
 
 export type Search = typeof searches.$inferSelect;
 export type SearchResult = typeof searchResults.$inferSelect;
 export type InsertSearch = z.infer<typeof insertSearchSchema>;
-export type InsertSearchResult = z.infer<typeof insertSearchResultSchema>;
+export type InsertSearchResult = typeof searchResults.$inferInsert;

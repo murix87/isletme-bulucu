@@ -25,30 +25,28 @@ export default function Home() {
     setIsLoading(true);
     setResults([]); // Önceki sonuçları temizle
 
+    const searchData = {
+      latitude: selectedLocation.lat,
+      longitude: selectedLocation.lng,
+      radius: radius
+    };
+
     try {
-      console.log("Searching with params:", {
-        latitude: selectedLocation.lat,
-        longitude: selectedLocation.lng,
-        radius
-      });
+      console.log("Arama parametreleri:", searchData);
 
       const res = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          latitude: selectedLocation.lat,
-          longitude: selectedLocation.lng,
-          radius: radius
-        })
+        body: JSON.stringify(searchData)
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Arama yapılırken bir hata oluştu');
+        throw new Error(data.error || 'Arama yapılırken bir hata oluştu');
       }
 
-      const data = await res.json();
-      console.log("Search results:", data);
+      console.log("Arama sonuçları:", data);
 
       if (!data.results || !Array.isArray(data.results)) {
         throw new Error('Sunucudan geçersiz yanıt alındı');
@@ -68,7 +66,7 @@ export default function Home() {
         });
       }
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('Arama hatası:', error);
       toast({
         variant: "destructive",
         title: "Hata",

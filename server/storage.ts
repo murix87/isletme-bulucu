@@ -41,19 +41,17 @@ export class MemStorage implements IStorage {
 
     const savedResults: SearchResult[] = results.map(result => ({
       id: this.currentResultId++,
-      searchId: Number(result.searchId),
+      searchId: result.searchId,
       placeId: result.placeId,
       name: result.name,
       address: result.address,
       phone: result.phone || null,
       website: result.website || null,
-      email: result.email || null,
-      types: result.types || null,
+      types: result.types || [],
       latitude: result.latitude.toString(),
       longitude: result.longitude.toString()
     }));
 
-    // Use the first result's searchId for storage
     const searchId = savedResults[0].searchId;
     this.searchResults.set(searchId, savedResults);
 
