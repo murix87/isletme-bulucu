@@ -133,7 +133,7 @@ async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
   let nextPageToken = null;
 
   do {
-    const baseUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
+    const baseUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&maxResults=100&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
     const url = nextPageToken ? `${baseUrl}&pagetoken=${nextPageToken}` : baseUrl;
 
     try {
@@ -168,6 +168,12 @@ async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
       nextPageToken = data.next_page_token;
       if (nextPageToken) {
         await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      // 100 sonuca ulaştığımızda döngüyü sonlandır
+      if (allResults.length >= 100) {
+        allResults = allResults.slice(0, 100);
+        break;
       }
     } catch (error) {
       console.error('Places API Error:', error);
