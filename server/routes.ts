@@ -39,7 +39,6 @@ async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
       }
 
       if (data.results && data.results.length > 0) {
-        // Get details for each place
         const detailedResults = await Promise.all(
           data.results.map(async (place: any) => {
             const details = await getPlaceDetails(place.place_id);
@@ -62,7 +61,6 @@ async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
 
       nextPageToken = data.next_page_token;
       if (nextPageToken) {
-        // Google requires a short delay before using the next page token
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
     } catch (error) {
@@ -115,19 +113,49 @@ export function registerRoutes(app: Express): Server {
       const searchId = parseInt(req.params.id);
       const results = await storage.getSearchResults(searchId);
 
-      // CSV formatında başlıklar
-      const headers = "İşyeri Adı,Adres,Telefon,Website,Email,İşyeri Tipleri,Enlem,Boylam\n";
+      // CSV başlıklarını Türkçe formatında düzenle
+      const headers = [
+        "Sıra No",
+        "İşyeri Adı",
+        "Adres",
+        "Telefon Numarası",
+        "Web Sitesi",
+        "E-posta Adresi",
+        "İşyeri Kategorileri",
+        "Konum (Enlem)",
+        "Konum (Boylam)"
+      ].join(";");
 
       // Her sonuç için CSV satırı oluştur
-      const rows = results.map(result => {
-        const types = Array.isArray(result.types) ? result.types.join(', ') : '';
-        return `"${result.name}","${result.address}","${result.phone || ''}","${result.website || ''}","${result.email || ''}","${types}",${result.latitude},${result.longitude}`;
+      const rows = results.map((result, index) => {
+        // İşyeri tiplerini düzgün formatta göster
+        const types = Array.isArray(result.types) ? 
+          result.types
+            .map(type => type.replace(/_/g, ' ').toLowerCase())
+            .join(', ') : '';
+
+        // Her bir alanı düzenle ve boş değerleri kontrol et
+        return [
+          index + 1,
+          result.name,
+          result.address,
+          result.phone || '',
+          result.website || '',
+          result.email || '',
+          types,
+          result.latitude,
+          result.longitude
+        ].map(value => `"${value}"`).join(";");
       }).join('\n');
 
-      const csv = headers + rows;
+      const csv = `${headers}\n${rows}`;
 
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=isletmeler.csv');
+      // CSV dosya adını tarih ile birlikte oluştur
+      const date = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
+      const fileName = `isletmeler_${date}.csv`;
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
       res.send(csv);
     } catch (error) {
       res.status(400).json({ error: String(error) });
