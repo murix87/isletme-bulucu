@@ -129,56 +129,69 @@ async function getPlaceDetails(placeId: string) {
 }
 
 async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
-  let allResults = [];
-  let nextPageToken = null;
+  const allResults: any[] = [];
+  let pageCount = 0;
+  let nextPageToken: string | null = null;
 
-  do {
-    const baseUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
-    const url = nextPageToken ? `${baseUrl}&pagetoken=${nextPageToken}` : baseUrl;
+  try {
+    do {
+      // Her sayfa isteği için 2 saniye bekle (ilk sayfa hariç)
+      if (nextPageToken) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
 
-    try {
+      const baseUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
+      const url = nextPageToken ? `${baseUrl}&pagetoken=${nextPageToken}` : baseUrl;
+
       const response = await fetch(url);
       const data = await response.json();
 
       if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-        throw new Error(data.error_message || 'Places API error');
+        console.error('Places API Error:', data);
+        throw new Error(data.error_message || 'API hatası: ' + data.status);
       }
 
       if (data.results && data.results.length > 0) {
         const detailedResults = await Promise.all(
           data.results.map(async (place: any) => {
-            const details = await getPlaceDetails(place.place_id);
-            return {
-              placeId: place.place_id,
-              name: place.name,
-              address: details?.formatted_address || place.vicinity,
-              latitude: place.geometry.location.lat,
-              longitude: place.geometry.location.lng,
-              phone: details?.formatted_phone_number || null,
-              website: details?.website || null,
-              email: details?.email || null,
-              types: place.types || []
-            };
+            try {
+              const details = await getPlaceDetails(place.place_id);
+              return {
+                placeId: place.place_id,
+                name: place.name,
+                address: details?.formatted_address || place.vicinity,
+                latitude: place.geometry.location.lat,
+                longitude: place.geometry.location.lng,
+                phone: details?.formatted_phone_number || null,
+                website: details?.website || null,
+                email: null, // Google Places API email alanını desteklemiyor
+                types: place.types || []
+              };
+            } catch (error) {
+              console.error(`Error fetching details for place ${place.place_id}:`, error);
+              return null;
+            }
           })
         );
 
-        allResults.push(...detailedResults);
+        // Hata alan sonuçları filtrele
+        const validResults = detailedResults.filter(result => result !== null);
+        allResults.push(...validResults);
       }
 
       nextPageToken = data.next_page_token;
+      pageCount++;
 
-      // Google Places API requires a delay between requests when using pagetoken
-      if (nextPageToken) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+      // Maksimum 3 sayfa sonuç al (Google Places API limiti)
+      if (pageCount >= 3) break;
 
-    } catch (error) {
-      console.error('Places API Error:', error);
-      throw new Error('İşletmeler aranırken bir hata oluştu');
-    }
-  } while (nextPageToken);
+    } while (nextPageToken);
 
-  return allResults;
+    return allResults;
+  } catch (error) {
+    console.error('Places API Search Error:', error);
+    throw new Error('İşletmeler aranırken bir hata oluştu');
+  }
 }
 
 export function registerRoutes(app: Express): Server {
