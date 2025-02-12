@@ -26,7 +26,12 @@ export class MemStorage implements IStorage {
 
   async createSearch(search: InsertSearch): Promise<Search> {
     const id = this.currentSearchId++;
-    const newSearch = { ...search, id };
+    const newSearch = {
+      id,
+      latitude: search.latitude.toString(),
+      longitude: search.longitude.toString(),
+      radius: search.radius.toString()
+    };
     this.searches.set(id, newSearch);
     return newSearch;
   }
@@ -36,20 +41,21 @@ export class MemStorage implements IStorage {
 
     const savedResults = results.map(result => {
       const id = this.currentResultId++;
-      if (!result.searchId) throw new Error("searchId is required");
-      return { 
-        ...result, 
+      return {
         id,
-        // Ensure all required fields are present with correct types
+        searchId: result.searchId,
+        placeId: result.placeId,
+        name: result.name,
+        address: result.address,
         phone: result.phone || null,
-        website: result.website || null
+        website: result.website || null,
+        latitude: result.latitude.toString(),
+        longitude: result.longitude.toString()
       };
     });
 
     const searchId = savedResults[0].searchId;
-    if (typeof searchId === 'number') {
-      this.searchResults.set(searchId, savedResults);
-    }
+    this.searchResults.set(searchId, savedResults);
     return savedResults;
   }
 
