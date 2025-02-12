@@ -8,7 +8,7 @@ interface ResultsListProps {
   isLoading: boolean;
 }
 
-export function ResultsList({ results, isLoading }: ResultsListProps) {
+export function ResultsList({ results = [], isLoading }: ResultsListProps) {
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -23,7 +23,7 @@ export function ResultsList({ results, isLoading }: ResultsListProps) {
     );
   }
 
-  if (results.length === 0) {
+  if (!results || results.length === 0) {
     return null;
   }
 
