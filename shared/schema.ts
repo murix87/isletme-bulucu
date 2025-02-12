@@ -21,12 +21,12 @@ export const searchResults = pgTable("search_results", {
   longitude: numeric("longitude", { precision: 10, scale: 6 }).notNull(),
 });
 
-export const insertSearchSchema = createInsertSchema(searches).transform((data) => ({
-  ...data,
-  latitude: Number(data.latitude),
-  longitude: Number(data.longitude),
-  radius: Number(data.radius)
-}));
+// Convert string values to numbers in the schema
+export const insertSearchSchema = z.object({
+  latitude: z.number(),
+  longitude: z.number(),
+  radius: z.number(),
+});
 
 export const insertSearchResultSchema = createInsertSchema(searchResults);
 

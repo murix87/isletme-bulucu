@@ -39,23 +39,22 @@ export class MemStorage implements IStorage {
   async saveSearchResults(results: InsertSearchResult[]): Promise<SearchResult[]> {
     if (results.length === 0) return [];
 
-    const savedResults = results.map(result => {
-      const id = this.currentResultId++;
-      return {
-        id,
-        searchId: result.searchId,
-        placeId: result.placeId,
-        name: result.name,
-        address: result.address,
-        phone: result.phone || null,
-        website: result.website || null,
-        latitude: result.latitude.toString(),
-        longitude: result.longitude.toString()
-      };
-    });
+    const savedResults: SearchResult[] = results.map(result => ({
+      id: this.currentResultId++,
+      searchId: result.searchId,
+      placeId: result.placeId,
+      name: result.name,
+      address: result.address,
+      phone: result.phone || null,
+      website: result.website || null,
+      latitude: result.latitude.toString(),
+      longitude: result.longitude.toString()
+    }));
 
     const searchId = savedResults[0].searchId;
-    this.searchResults.set(searchId, savedResults);
+    if (searchId !== undefined) {
+      this.searchResults.set(searchId, savedResults);
+    }
     return savedResults;
   }
 
