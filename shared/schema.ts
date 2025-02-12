@@ -4,9 +4,9 @@ import { z } from "zod";
 
 export const searches = pgTable("searches", {
   id: serial("id").primaryKey(),
-  latitude: numeric("latitude").notNull(),
-  longitude: numeric("longitude").notNull(),
-  radius: numeric("radius").notNull(),
+  latitude: numeric("latitude", { precision: 10, scale: 6 }).notNull(),
+  longitude: numeric("longitude", { precision: 10, scale: 6 }).notNull(),
+  radius: numeric("radius", { precision: 10, scale: 2 }).notNull(),
 });
 
 export const searchResults = pgTable("search_results", {
@@ -17,11 +17,17 @@ export const searchResults = pgTable("search_results", {
   address: text("address").notNull(),
   phone: text("phone"),
   website: text("website"),
-  latitude: numeric("latitude").notNull(),
-  longitude: numeric("longitude").notNull(),
+  latitude: numeric("latitude", { precision: 10, scale: 6 }).notNull(),
+  longitude: numeric("longitude", { precision: 10, scale: 6 }).notNull(),
 });
 
-export const insertSearchSchema = createInsertSchema(searches);
+export const insertSearchSchema = createInsertSchema(searches).transform((data) => ({
+  ...data,
+  latitude: Number(data.latitude),
+  longitude: Number(data.longitude),
+  radius: Number(data.radius)
+}));
+
 export const insertSearchResultSchema = createInsertSchema(searchResults);
 
 export type Search = typeof searches.$inferSelect;

@@ -4,11 +4,13 @@ import { SearchForm } from "@/components/search-form";
 import { ResultsList } from "@/components/results-list";
 import { useState } from "react";
 import type { SearchResult } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const [selectedLocation, setSelectedLocation] = useState<google.maps.LatLngLiteral | null>(null);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -30,15 +32,26 @@ export default function Home() {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
-                        latitude: selectedLocation.lat,
-                        longitude: selectedLocation.lng,
-                        radius
+                        latitude: Number(selectedLocation.lat),
+                        longitude: Number(selectedLocation.lng),
+                        radius: Number(radius)
                       })
                     });
+
+                    if (!res.ok) {
+                      const error = await res.json();
+                      throw new Error(error.error || 'Arama yapılırken bir hata oluştu');
+                    }
+
                     const data = await res.json();
                     setResults(data.results);
                   } catch (error) {
                     console.error(error);
+                    toast({
+                      variant: "destructive",
+                      title: "Hata",
+                      description: error instanceof Error ? error.message : 'Bir hata oluştu'
+                    });
                   } finally {
                     setIsLoading(false);
                   }

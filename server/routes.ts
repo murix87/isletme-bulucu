@@ -3,28 +3,54 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertSearchSchema } from "@shared/schema";
 
+async function searchNearbyPlaces(lat: number, lng: number, radius: number) {
+  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status !== 'OK') {
+      throw new Error(data.error_message || 'Places API error');
+    }
+
+    return data.results.map((place: any) => ({
+      placeId: place.place_id,
+      name: place.name,
+      address: place.vicinity,
+      latitude: place.geometry.location.lat,
+      longitude: place.geometry.location.lng,
+      phone: place.formatted_phone_number || null,
+      website: place.website || null
+    }));
+  } catch (error) {
+    console.error('Places API Error:', error);
+    throw new Error('İşletmeler aranırken bir hata oluştu');
+  }
+}
+
 export function registerRoutes(app: Express): Server {
   app.post("/api/search", async (req, res) => {
     try {
       const searchData = insertSearchSchema.parse(req.body);
       const search = await storage.createSearch(searchData);
 
-      // Call Google Places API here with the search parameters
-      // For now, we'll return mock data
-      const mockResults = [{
-        searchId: search.id,
-        placeId: "mock-1",
-        name: "Mock Business",
-        address: "123 Mock St",
-        phone: "555-0123",
-        website: "https://mock.com",
-        latitude: searchData.latitude.toString(),
-        longitude: searchData.longitude.toString()
-      }];
+      const places = await searchNearbyPlaces(
+        searchData.latitude,
+        searchData.longitude,
+        searchData.radius
+      );
 
-      const results = await storage.saveSearchResults(mockResults);
+      const results = await storage.saveSearchResults(
+        places.map(place => ({
+          ...place,
+          searchId: search.id
+        }))
+      );
+
       res.json({ search, results });
     } catch (error) {
+      console.error('Search Error:', error);
       res.status(400).json({ error: String(error) });
     }
   });
