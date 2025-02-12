@@ -17,6 +17,8 @@ export const searchResults = pgTable("search_results", {
   address: text("address").notNull(),
   phone: text("phone"),
   website: text("website"),
+  email: text("email"),
+  types: text("types").array(),
   latitude: numeric("latitude", { precision: 10, scale: 6 }).notNull(),
   longitude: numeric("longitude", { precision: 10, scale: 6 }).notNull(),
 });

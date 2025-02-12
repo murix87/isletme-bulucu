@@ -47,6 +47,8 @@ export class MemStorage implements IStorage {
       address: result.address,
       phone: result.phone || null,
       website: result.website || null,
+      email: result.email || null,
+      types: result.types || null,
       latitude: result.latitude.toString(),
       longitude: result.longitude.toString()
     }));
