@@ -40,8 +40,10 @@ export function MapView({ selectedLocation, onLocationSelect, results }: MapView
     });
 
     return () => {
-      markersRef.current.forEach(marker => marker.setMap(null));
-      markersRef.current = [];
+      if (markersRef.current) {
+        markersRef.current.forEach(marker => marker.setMap(null));
+        markersRef.current = [];
+      }
     };
   }, []);
 
@@ -50,8 +52,10 @@ export function MapView({ selectedLocation, onLocationSelect, results }: MapView
     mapInstanceRef.current.setCenter(selectedLocation);
 
     // Clear old markers
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
+    if (markersRef.current) {
+      markersRef.current.forEach(marker => marker.setMap(null));
+      markersRef.current = [];
+    }
 
     // Add selected location marker
     const marker = new google.maps.Marker({
@@ -70,11 +74,13 @@ export function MapView({ selectedLocation, onLocationSelect, results }: MapView
   }, [selectedLocation]);
 
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || !results) return;
 
     // Clear old result markers
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
+    if (markersRef.current) {
+      markersRef.current.forEach(marker => marker.setMap(null));
+      markersRef.current = [];
+    }
 
     // Add new result markers
     results.forEach((result, index) => {
